@@ -1,0 +1,9 @@
+# Default ownership
+* @breadoncee
+
+# Skill contract and validation require maintainer review
+/skills/ @breadoncee
+/scripts/validate-skills.sh @breadoncee
+/docs/skill-contract.md @breadoncee
+/docs/open-source-scope.md @breadoncee
+/docs/versioning.md @breadoncee
