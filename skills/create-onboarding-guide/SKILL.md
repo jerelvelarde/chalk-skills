@@ -140,8 +140,9 @@ Complete this task to verify your setup and learn the workflow:
 1. Create a branch: `git checkout -b onboarding/<your-name>`
 2. Make the change: <specific instructions>
 3. Run tests: `<test command>`
-4. Commit and push: `git commit -m "<message>"` && `git push`
-5. Open a PR following the team's PR template
+4. Commit: `git add <files>` && `git commit -m "<message>"`
+5. Push: `git push -u origin onboarding/<your-name>`
+6. Open a PR following the team's PR template
 
 This exercises: branching, local development, testing, and the PR process.
 
