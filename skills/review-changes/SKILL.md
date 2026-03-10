@@ -18,14 +18,18 @@ Run the full handoff generation inline (do not invoke `/create-handoff` as a sub
 
 ### Step 1.1: Determine the session name
 
-1. If the user provided `$ARGUMENTS`, sanitize it to a safe kebab-case string (lowercase, strip any characters that aren't alphanumeric or hyphens, collapse multiple hyphens) and use that as the session name
+1. If the user provided `$ARGUMENTS`, sanitize it using a shell command — not LLM interpretation — to produce a safe kebab-case string:
+   ```sh
+   echo "$ARGUMENTS" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g'
+   ```
+   Use the output as the session name. If the sanitized result is empty, fall back to option 2.
 2. Otherwise, infer from the current branch name (e.g. `feature/issue-24-authentication` → `issue-24-authentication`)
 3. If on `main`/`master`, ask the user what to name the session
 
 ### Step 1.2: Create the session directory
 
 ```sh
-SESSION_DIR=".chalk/reviews/${session_name}"
+SESSION_DIR=".chalk/reviews/sessions/${session_name}"
 mkdir -p "$SESSION_DIR"
 ```
 
@@ -135,9 +139,9 @@ If the user chooses self-review:
 
 If the user chooses external review:
 
-1. Bootstrap the review pipeline scripts if not already present (create `.chalk/reviews/scripts/pack.sh`, `render-prompt.sh`, `copy-prompt.sh`, and `.chalk/reviews/templates/reviewer.template.md` — see `/create-review` skill for the full script contents)
-2. Generate the review pack: `bash .chalk/reviews/scripts/pack.sh "{base}" "{session}"`
-3. Generate the prompt: `bash .chalk/reviews/scripts/render-prompt.sh "reviewer" ...`
+1. Bootstrap the review pipeline scripts if not already present — invoke `/create-review` which will create the scripts and templates with their exact, version-controlled content. Do NOT generate the scripts inline.
+2. Generate the review pack: `bash .chalk/reviews/scripts/pack.sh "{base}" "{session_name}"`
+3. Generate the prompt: `bash .chalk/reviews/scripts/render-prompt.sh "reviewer" "" "" "" "{session_name}"`
 4. Copy to clipboard if possible
 5. Tell the user: "Prompt copied — paste it into your reviewer. When you have the findings, save them to `$SESSION_DIR/{reviewer-name}.findings.md` and tell me to continue."
 6. **Wait for the user to come back.** When they say they're ready or tell you to continue, proceed to Phase 3.
@@ -191,7 +195,7 @@ Write `.chalk/reviews/sessions/{session_name}/resolution.md`:
 # Finding Resolution Log
 
 ## Summary
-- Session: {session}
+- Session: {session_name}
 - Item: {from session name}
 - Reviewers: {list of sources}
 - Decision owner:
