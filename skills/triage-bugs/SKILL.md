@@ -113,7 +113,7 @@ Triaged by: <agent or person>
 | Field | Value |
 |-------|-------|
 | Severity | Critical |
-| Priority | P1 |
+| Priority | P0 |
 | Component | <component> |
 | Suggested Owner | <team or area> |
 | Reproduction | Reproduced / Not reproduced |
@@ -189,7 +189,7 @@ Priority is not the same as severity. Priority determines when to fix it.
 | **Some/Few Users, Frequent** | P1 — Fix this sprint | P2 — Next sprint | P3 — Backlog |
 | **Some/Few Users, Rare** | P2 — Next sprint | P3 — Backlog | P3 — Backlog |
 
-A Critical severity bug is always at least P1 regardless of this matrix.
+A Critical severity bug is always P0 regardless of this matrix.
 
 ## Anti-patterns
 

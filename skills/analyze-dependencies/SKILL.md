@@ -198,6 +198,8 @@ Manifest: <path to manifest file>
 
 The overall risk score for a dependency is the highest score across all dimensions.
 
+> **Note:** These risk levels assume distributed, proprietary software. Adjust based on your project's distribution model — for internal-only tools, even copyleft licenses may be low risk. For dynamically linked libraries, LGPL is often low risk.
+
 ## Anti-patterns
 
 - **Only checking for vulnerabilities, ignoring staleness** — A dependency with no CVEs but abandoned for 3 years is a ticking time bomb. When a vulnerability is discovered, there will be no one to patch it. Staleness is a leading indicator of future risk.

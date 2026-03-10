@@ -130,11 +130,11 @@ Tech stack: <languages, frameworks, infrastructure>
 | A03: Injection | <n> | Issues found / Clear |
 | A04: Insecure Design | <n> | Issues found / Clear |
 | A05: Security Misconfiguration | <n> | Issues found / Clear |
-| A06: Vulnerable Components | <n> | Issues found / Clear |
-| A07: Auth Failures | <n> | Issues found / Clear |
-| A08: Data Integrity Failures | <n> | Issues found / Clear |
-| A09: Logging Failures | <n> | Issues found / Clear |
-| A10: SSRF | <n> | Issues found / Clear |
+| A06: Vulnerable and Outdated Components | <n> | Issues found / Clear |
+| A07: Identification and Authentication Failures | <n> | Issues found / Clear |
+| A08: Software and Data Integrity Failures | <n> | Issues found / Clear |
+| A09: Security Logging and Monitoring Failures | <n> | Issues found / Clear |
+| A10: Server-Side Request Forgery (SSRF) | <n> | Issues found / Clear |
 
 ## Critical Findings
 
