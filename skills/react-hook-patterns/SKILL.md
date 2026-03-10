@@ -319,17 +319,20 @@ function useOnlineStatus() {
 // Composed hook
 function useResilientFetch<T>(url: string) {
   const isOnline = useOnlineStatus();
-  const result = useFetch<T>(isOnline ? url : null);
+  const [fetchKey, setFetchKey] = useState(0);
+  const result = useFetch<T>(isOnline ? url : null, fetchKey);
   const debouncedRetry = useDebounce(isOnline, 2000);
+
+  const refetch = useCallback(() => setFetchKey((k) => k + 1), []);
 
   // Auto-retry when coming back online (debounced)
   useEffect(() => {
     if (debouncedRetry && result.status === "error") {
-      // trigger refetch by remounting
+      refetch();
     }
-  }, [debouncedRetry, result.status]);
+  }, [debouncedRetry, result.status, refetch]);
 
-  return { ...result, isOnline };
+  return { ...result, isOnline, refetch };
 }
 ```
 

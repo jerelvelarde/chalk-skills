@@ -331,6 +331,10 @@ class InactiveUserError(DomainError):
 class OrderNotEditableError(DomainError):
     def __init__(self, order_id: str, status: str):
         super().__init__(f"Order {order_id} cannot be edited in status '{status}'")
+
+class EmptyOrderError(DomainError):
+    def __init__(self, order_id: str):
+        super().__init__(f"Order {order_id} cannot be submitted with no items")
 ```
 
 ### Mapping Domain Errors to HTTP

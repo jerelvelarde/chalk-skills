@@ -76,10 +76,24 @@ class AddressRequest(BaseModel):
     state: str = Field(min_length=2, max_length=2)
     zip_code: str = Field(pattern=r"^\d{5}(-\d{4})?$")
 
+class OrderItemRequest(BaseModel):
+    product_id: int
+    quantity: int = Field(ge=1)
+    notes: str | None = None
+
 class CreateOrderRequest(BaseModel):
     items: list[OrderItemRequest] = Field(min_length=1)
     shipping_address: AddressRequest
     notes: str | None = None
+
+class OrderItemResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: float
+    subtotal: float
+
+    model_config = {"from_attributes": True}
 
 class OrderResponse(BaseModel):
     id: int
@@ -324,6 +338,11 @@ async def create_user(
 
 ```python
 from pydantic import BaseModel, Field
+from typing import Generic, TypeVar
+import math
+from sqlalchemy import func, select
+
+T = TypeVar("T")
 
 class PaginationParams(BaseModel):
     page: int = Field(1, ge=1)
@@ -345,7 +364,7 @@ async def list_users(
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    total = await db.scalar(select(func.count(User.id)))
+    total = await db.scalar(select(func.count(User.id))) or 0
     result = await db.execute(
         select(User)
         .offset(pagination.offset)
@@ -359,7 +378,7 @@ async def list_users(
         total=total,
         page=pagination.page,
         size=pagination.size,
-        pages=math.ceil(total / pagination.size),
+        pages=math.ceil(total / pagination.size) if pagination.size > 0 else 0,
     )
 ```
 

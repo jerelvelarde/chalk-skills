@@ -47,8 +47,14 @@ class LikeButton extends StatefulWidget {
 }
 
 class _LikeButtonState extends State<LikeButton> {
-  late int _count = widget.initialCount;
+  late int _count;
   bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _count = widget.initialCount;
+  }
 
   void _toggleLike() {
     setState(() {

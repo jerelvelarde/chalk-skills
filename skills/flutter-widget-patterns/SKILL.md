@@ -395,6 +395,38 @@ class _MyState extends State<MyWidget> {
   }
 }
 
-// GOOD: Extract counter into its own widget
-// ExpensiveHeader and ExpensiveFooter are const and skip rebuilds
+// GOOD: Extract the changing part into its own widget
+class MyWidget extends StatelessWidget {
+  const MyWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const ExpensiveHeader(),   // Never rebuilds
+        const CounterText(),       // Only this rebuilds
+        const ExpensiveFooter(),   // Never rebuilds
+      ],
+    );
+  }
+}
+
+class CounterText extends StatefulWidget {
+  const CounterText({super.key});
+
+  @override
+  State<CounterText> createState() => _CounterTextState();
+}
+
+class _CounterTextState extends State<CounterText> {
+  int _counter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _counter++),
+      child: Text('$_counter'),
+    );
+  }
+}
 ```

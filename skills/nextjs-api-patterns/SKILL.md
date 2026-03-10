@@ -359,6 +359,8 @@ export async function updateProfile(formData: FormData) {
 
 ## Rate Limiting
 
+> **Note:** The in-memory example below is for demonstration only. In serverless or distributed environments (e.g., Vercel), the `Map` resets with each function invocation. For production, use Redis, Upstash, or a similar persistent store.
+
 ```tsx
 // lib/rate-limit.ts
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
