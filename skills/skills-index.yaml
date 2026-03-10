@@ -16,6 +16,10 @@ skills:
     path: skills/create-review/SKILL.md
     owner: chalk
     version: "1.0.0"
+  - name: fix-findings
+    path: skills/fix-findings/SKILL.md
+    owner: chalk
+    version: "1.0.0"
   - name: fix-review
     path: skills/fix-review/SKILL.md
     owner: chalk

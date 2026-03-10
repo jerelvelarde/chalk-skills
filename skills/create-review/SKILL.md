@@ -17,7 +17,7 @@ Bootstrap the review pipeline and generate a paste-ready review prompt for any A
 **Reviewer:** If the user provided `$ARGUMENTS`, sanitize it to a safe kebab-case string (lowercase, strip any characters that aren't alphanumeric or hyphens, collapse multiple hyphens) and use that as the reviewer name (e.g. `codex`, `gemini`, `gpt4`, `claude`). If no argument, use `generic`.
 
 **Session:** Detect from context:
-1. If `.reviews/` exists, check for the most recent session directory
+1. If `.chalk/reviews/` exists, check for the most recent session directory
 2. Otherwise, infer from the current branch name (kebab-case)
 3. If on `main`/`master`, ask the user
 
@@ -25,13 +25,13 @@ Store as `{reviewer}` and `{session}`.
 
 ## Step 2: Bootstrap the review pipeline
 
-Check if `.reviews/scripts/pack.sh` exists. If not, bootstrap the full pipeline:
+Check if `.chalk/reviews/scripts/pack.sh` exists. If not, bootstrap the full pipeline:
 
 ```sh
-mkdir -p .reviews/scripts .reviews/templates .reviews/sessions
+mkdir -p .chalk/reviews/scripts .chalk/reviews/templates .chalk/reviews/sessions
 ```
 
-### Create `.reviews/scripts/pack.sh`
+### Create `.chalk/reviews/scripts/pack.sh`
 
 This script generates a review context pack from git state:
 
@@ -41,7 +41,7 @@ set -euo pipefail
 
 BASE_REF="${1:-origin/main}"
 SESSION="${2:-adhoc}"
-OUTPUT_PATH="${3:-.reviews/sessions/${SESSION}/pack.md}"
+OUTPUT_PATH="${3:-.chalk/reviews/sessions/${SESSION}/pack.md}"
 
 # Resolve base ref
 if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
@@ -96,7 +96,7 @@ mkdir -p "$(dirname "$OUTPUT_PATH")"
 echo "PACK_PATH=$OUTPUT_PATH"
 ```
 
-### Create `.reviews/scripts/render-prompt.sh`
+### Create `.chalk/reviews/scripts/render-prompt.sh`
 
 This script combines pack + handoff + reviewer template into a prompt:
 
@@ -162,7 +162,7 @@ mkdir -p "$(dirname "$OUTPUT_PATH")"
 echo "PROMPT_PATH=$OUTPUT_PATH"
 ```
 
-### Create `.reviews/scripts/copy-prompt.sh`
+### Create `.chalk/reviews/scripts/copy-prompt.sh`
 
 ```sh
 #!/usr/bin/env bash
@@ -194,7 +194,7 @@ if [ "$COPIED" -eq 0 ]; then
 fi
 ```
 
-### Create `.reviews/templates/generic-review.template.md`
+### Create `.chalk/reviews/templates/generic-review.template.md`
 
 Only create if it does not already exist (preserve user customizations):
 
@@ -222,7 +222,7 @@ Rules:
 - If no blocking issues exist, explicitly state: `No blocking findings`.
 ```
 
-### Create `.reviews/templates/codex-review.template.md`
+### Create `.chalk/reviews/templates/codex-review.template.md`
 
 Only create if it does not already exist:
 
@@ -252,7 +252,7 @@ Rules:
 - Keep recommendations patch-oriented and specific.
 ```
 
-### Create `.reviews/templates/gemini-review.template.md`
+### Create `.chalk/reviews/templates/gemini-review.template.md`
 
 Only create if it does not already exist:
 
@@ -286,10 +286,10 @@ Rules:
 ### Make scripts executable
 
 ```sh
-chmod +x .reviews/scripts/pack.sh .reviews/scripts/render-prompt.sh .reviews/scripts/copy-prompt.sh
+chmod +x .chalk/reviews/scripts/pack.sh .chalk/reviews/scripts/render-prompt.sh .chalk/reviews/scripts/copy-prompt.sh
 ```
 
-### Create `.reviews/PIPELINE.md`
+### Create `.chalk/reviews/PIPELINE.md`
 
 Write a brief usage guide explaining the pipeline, available scripts, and how to add custom reviewer templates. Refresh this on every run.
 
@@ -301,31 +301,31 @@ Write a brief usage guide explaining the pipeline, available scripts, and how to
 
 ## Step 4: Check for a handoff
 
-Look for `.reviews/sessions/{session}/handoff.md`. If it exists, it will be included in the prompt. If not, warn the user that no handoff was found and suggest running `/create-handoff` first, but continue anyway.
+Look for `.chalk/reviews/sessions/{session}/handoff.md`. If it exists, it will be included in the prompt. If not, warn the user that no handoff was found and suggest running `/create-handoff` first, but continue anyway.
 
 ## Step 5: Generate the review pack
 
 ```sh
-bash .reviews/scripts/pack.sh "{base}" "{session}" ".reviews/sessions/{session}/pack.md"
+bash .chalk/reviews/scripts/pack.sh "{base}" "{session}" ".chalk/reviews/sessions/{session}/pack.md"
 ```
 
 ## Step 6: Generate the review prompt
 
 ```sh
-bash .reviews/scripts/render-prompt.sh "{reviewer}" \
-  ".reviews/sessions/{session}/pack.md" \
-  ".reviews/sessions/{session}/handoff.md" \
-  ".reviews/sessions/{session}/{reviewer}.prompt.md" \
+bash .chalk/reviews/scripts/render-prompt.sh "{reviewer}" \
+  ".chalk/reviews/sessions/{session}/pack.md" \
+  ".chalk/reviews/sessions/{session}/handoff.md" \
+  ".chalk/reviews/sessions/{session}/{reviewer}.prompt.md" \
   "{session}"
 ```
 
 ## Step 7: Copy to clipboard
 
 ```sh
-bash .reviews/scripts/copy-prompt.sh "{reviewer}" \
-  ".reviews/sessions/{session}/pack.md" \
-  ".reviews/sessions/{session}/handoff.md" \
-  ".reviews/sessions/{session}/{reviewer}.prompt.md" \
+bash .chalk/reviews/scripts/copy-prompt.sh "{reviewer}" \
+  ".chalk/reviews/sessions/{session}/pack.md" \
+  ".chalk/reviews/sessions/{session}/handoff.md" \
+  ".chalk/reviews/sessions/{session}/{reviewer}.prompt.md" \
   "{session}"
 ```
 
@@ -338,12 +338,12 @@ Show:
 - Suggest: paste the prompt into the target model, or run with a different provider (e.g. `/create-review gemini`)
 
 Also mention:
-- To add a custom reviewer, create `.reviews/templates/{name}-review.template.md`
+- To add a custom reviewer, create `.chalk/reviews/templates/{name}-review.template.md`
 - To review with multiple providers: run the skill again with a different argument
 
 ## Step 9: Save current session
 
-Write the session name to `.reviews/.current-session` so subsequent runs can pick it up.
+Write the session name to `.chalk/reviews/.current-session` so subsequent runs can pick it up.
 
 ## Rules
 
