@@ -5,6 +5,80 @@ ROOT="${1:-skills}"
 FAILED=0
 COUNT=0
 
+trim() {
+  printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+get_frontmatter_value() {
+  local frontmatter="$1"
+  local key="$2"
+  printf '%s\n' "$frontmatter" | sed -n "s/^$key:[[:space:]]*//p" | head -n1 | sed 's/^"//;s/"$//'
+}
+
+validate_csv_values() {
+  local file="$1"
+  local field="$2"
+  local value="$3"
+  local item
+  local seen=0
+
+  IFS=',' read -r -a items <<< "$value"
+  for item in "${items[@]}"; do
+    item="$(trim "$item")"
+    if [[ -z "$item" ]]; then
+      echo "FAIL $file: $field contains an empty entry"
+      FAILED=1
+      continue
+    fi
+    seen=1
+  done
+
+  if [[ "$seen" -eq 0 ]]; then
+    echo "FAIL $file: $field must contain at least one value"
+    FAILED=1
+  fi
+}
+
+validate_capabilities() {
+  local file="$1"
+  local value="$2"
+  local capability
+
+  validate_csv_values "$file" "capabilities" "$value"
+
+  IFS=',' read -r -a items <<< "$value"
+  for capability in "${items[@]}"; do
+    capability="$(trim "$capability")"
+    [[ -z "$capability" ]] && continue
+    if [[ ! "$capability" =~ ^[a-z0-9]+([.-][a-z0-9]+)*$ ]]; then
+      echo "FAIL $file: invalid capability '$capability'"
+      FAILED=1
+    fi
+  done
+}
+
+validate_activation_events() {
+  local file="$1"
+  local value="$2"
+  local event
+
+  validate_csv_values "$file" "activation-events" "$value"
+
+  IFS=',' read -r -a items <<< "$value"
+  for event in "${items[@]}"; do
+    event="$(trim "$event")"
+    [[ -z "$event" ]] && continue
+    case "$event" in
+      user-prompt|session-start|pre-tool-use|post-tool-use|pre-compact|session-end)
+        ;;
+      *)
+        echo "FAIL $file: unsupported activation event '$event'"
+        FAILED=1
+        ;;
+    esac
+  done
+}
+
 if [[ ! -d "$ROOT" ]]; then
   echo "ERROR: skills root not found: $ROOT"
   exit 1
@@ -22,11 +96,16 @@ for file in "$ROOT"/*/SKILL.md; do
     continue
   fi
 
-  name="$(printf '%s\n' "$frontmatter" | sed -n 's/^name:[[:space:]]*//p' | head -n1 | tr -d '"')"
-  description="$(printf '%s\n' "$frontmatter" | sed -n 's/^description:[[:space:]]*//p' | head -n1 | tr -d '"')"
-  owner="$(printf '%s\n' "$frontmatter" | sed -n 's/^owner:[[:space:]]*//p' | head -n1 | tr -d '"')"
-  version="$(printf '%s\n' "$frontmatter" | sed -n 's/^version:[[:space:]]*//p' | head -n1 | tr -d '"')"
-  metadata_version="$(printf '%s\n' "$frontmatter" | sed -n 's/^metadata-version:[[:space:]]*//p' | head -n1 | tr -d '"')"
+  name="$(get_frontmatter_value "$frontmatter" "name")"
+  description="$(get_frontmatter_value "$frontmatter" "description")"
+  owner="$(get_frontmatter_value "$frontmatter" "owner")"
+  version="$(get_frontmatter_value "$frontmatter" "version")"
+  metadata_version="$(get_frontmatter_value "$frontmatter" "metadata-version")"
+  capabilities="$(get_frontmatter_value "$frontmatter" "capabilities")"
+  activation_intents="$(get_frontmatter_value "$frontmatter" "activation-intents")"
+  activation_events="$(get_frontmatter_value "$frontmatter" "activation-events")"
+  activation_artifacts="$(get_frontmatter_value "$frontmatter" "activation-artifacts")"
+  risk_level="$(get_frontmatter_value "$frontmatter" "risk-level")"
 
   if [[ -z "$name" || -z "$description" || -z "$owner" || -z "$version" || -z "$metadata_version" ]]; then
     echo "FAIL $file: missing one of required keys (name, description, owner, version, metadata-version)"
@@ -48,8 +127,8 @@ for file in "$ROOT"/*/SKILL.md; do
     FAILED=1
   fi
 
-  if [[ "$metadata_version" != "1" ]]; then
-    echo "FAIL $file: metadata-version must be '1', got '$metadata_version'"
+  if [[ "$metadata_version" != "1" && "$metadata_version" != "2" ]]; then
+    echo "FAIL $file: metadata-version must be '1' or '2', got '$metadata_version'"
     FAILED=1
   fi
 
@@ -61,6 +140,34 @@ for file in "$ROOT"/*/SKILL.md; do
   if [[ "$owner" != "chalk" && "$owner" != "project" ]]; then
     echo "FAIL $file: owner must be chalk or project, got '$owner'"
     FAILED=1
+  fi
+
+  if [[ "$metadata_version" == "1" && (-n "$capabilities" || -n "$activation_intents" || -n "$activation_events" || -n "$activation_artifacts" || -n "$risk_level") ]]; then
+    echo "FAIL $file: activation metadata requires metadata-version '2'"
+    FAILED=1
+  fi
+
+  if [[ "$metadata_version" == "2" ]]; then
+    if [[ -n "$capabilities" ]]; then
+      validate_capabilities "$file" "$capabilities"
+    fi
+
+    if [[ -n "$activation_intents" ]]; then
+      validate_csv_values "$file" "activation-intents" "$activation_intents"
+    fi
+
+    if [[ -n "$activation_events" ]]; then
+      validate_activation_events "$file" "$activation_events"
+    fi
+
+    if [[ -n "$activation_artifacts" ]]; then
+      validate_csv_values "$file" "activation-artifacts" "$activation_artifacts"
+    fi
+
+    if [[ -n "$risk_level" && "$risk_level" != "low" && "$risk_level" != "medium" && "$risk_level" != "high" ]]; then
+      echo "FAIL $file: risk-level must be low, medium, or high"
+      FAILED=1
+    fi
   fi
 
 done
