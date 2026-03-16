@@ -88,9 +88,16 @@ which ffmpeg 2>/dev/null
 
 If ffmpeg is missing, warn: "ffmpeg not found — screenshots only (no GIFs). Install with `brew install ffmpeg` for GIF support."
 
-### Step 5: Write and Execute Playwright Capture Script
+### Step 5: Clean Old Artifacts and Capture New Ones
 
-Create a temporary capture script at `.chalk/local/capture-script.ts`:
+First, clean any previous screenshots to ensure a fresh capture:
+
+```bash
+rm -rf .github/pr-screenshots/ 2>/dev/null
+mkdir -p .github/pr-screenshots/
+```
+
+Then create a temporary capture script at `.chalk/local/capture-script.ts`:
 
 ```typescript
 import { chromium } from 'playwright';
@@ -179,11 +186,9 @@ rm -rf .github/pr-screenshots/videos
 
 ### Step 7: Commit Artifacts
 
-Clean old screenshots first, then commit new ones:
+Commit the new visual artifacts:
 
 ```bash
-rm -rf .github/pr-screenshots/ 2>/dev/null
-# (capture runs in Step 5, producing new files)
 git add .github/pr-screenshots/
 git commit -m "chore: add PR visual artifacts"
 ```
