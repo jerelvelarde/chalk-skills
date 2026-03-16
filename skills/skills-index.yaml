@@ -1,5 +1,6 @@
 metadataVersion: "1"
 skills:
+  # --- Phase 0: Foundation ---
   - name: create-doc
     path: skills/create-doc/SKILL.md
     owner: chalk
@@ -46,5 +47,51 @@ skills:
     version: "1.0.0"
   - name: update-doc
     path: skills/update-doc/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+
+  # --- Phase 3: Design & Specification ---
+  - name: create-prd
+    path: skills/create-prd/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+  - name: review-prd
+    path: skills/review-prd/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+  - name: create-user-stories
+    path: skills/create-user-stories/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+
+  # --- Phase 4: Architecture & Technical Design ---
+  - name: create-adr
+    path: skills/create-adr/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+
+  # --- Phase 5: Engineering Handoff & Planning ---
+  - name: create-estimation
+    path: skills/create-estimation/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+  - name: create-test-plan
+    path: skills/create-test-plan/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+
+  # --- Phase 6: Development & Delivery ---
+  - name: create-pr-description
+    path: skills/create-pr-description/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+  - name: review-code
+    path: skills/review-code/SKILL.md
+    owner: chalk
+    version: "1.0.0"
+
+  # --- Phase 8: Launch & Release ---
+  - name: create-release-checklist
+    path: skills/create-release-checklist/SKILL.md
     owner: chalk
     version: "1.0.0"
