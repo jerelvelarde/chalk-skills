@@ -13,13 +13,19 @@ Required:
 Options:
   --owner <chalk|project>       Skill owner (default: project)
   --version <x.y.z>             Initial version (default: 1.0.0)
-  --metadata-version <n>        Frontmatter schema version (default: 1)
+  --metadata-version <n>        Frontmatter schema version (default: 2)
   --allowed-tools <text>        Optional allowed-tools field
   --argument-hint <text>        Optional argument-hint field
+  --capabilities <text>         Optional capability tags (comma-separated)
+  --activation-intents <text>   Optional trigger phrases (comma-separated)
+  --activation-events <text>    Optional event names (comma-separated)
+  --activation-artifacts <text> Optional repo paths or globs (comma-separated)
+  --risk-level <low|medium|high> Optional side-effect hint
   --path <dir>                  Root path for skills (default: skills)
 
 Examples:
   scripts/init-skill.sh site-map --description "Create site maps from captured flow context" --owner chalk --allowed-tools "Read, Glob, Write"
+  scripts/init-skill.sh create-adr --description "Create ADR docs when the user asks for architecture decisions" --owner chalk --capabilities "docs.create,architecture.adr" --activation-intents "create adr,write architecture decision" --activation-events "user-prompt" --activation-artifacts "docs/adr/**" --risk-level low
   scripts/init-skill.sh my-team-helper --description "Project helper skill" --owner project --path .chalk/skills
 USAGE
 }
@@ -38,10 +44,15 @@ NAME="$1"
 shift
 OWNER="project"
 VERSION="1.0.0"
-METADATA_VERSION="1"
+METADATA_VERSION="2"
 DESCRIPTION=""
 ALLOWED_TOOLS=""
 ARGUMENT_HINT=""
+CAPABILITIES=""
+ACTIVATION_INTENTS=""
+ACTIVATION_EVENTS=""
+ACTIVATION_ARTIFACTS=""
+RISK_LEVEL=""
 ROOT_PATH="skills"
 
 while [[ $# -gt 0 ]]; do
@@ -68,6 +79,26 @@ while [[ $# -gt 0 ]]; do
       ;;
     --argument-hint)
       ARGUMENT_HINT="${2:-}"
+      shift 2
+      ;;
+    --capabilities)
+      CAPABILITIES="${2:-}"
+      shift 2
+      ;;
+    --activation-intents)
+      ACTIVATION_INTENTS="${2:-}"
+      shift 2
+      ;;
+    --activation-events)
+      ACTIVATION_EVENTS="${2:-}"
+      shift 2
+      ;;
+    --activation-artifacts)
+      ACTIVATION_ARTIFACTS="${2:-}"
+      shift 2
+      ;;
+    --risk-level)
+      RISK_LEVEL="${2:-}"
       shift 2
       ;;
     --path)
@@ -111,6 +142,21 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
+if [[ "$METADATA_VERSION" != "1" && "$METADATA_VERSION" != "2" ]]; then
+  echo "ERROR: --metadata-version must be '1' or '2'"
+  exit 1
+fi
+
+if [[ -n "$RISK_LEVEL" && "$RISK_LEVEL" != "low" && "$RISK_LEVEL" != "medium" && "$RISK_LEVEL" != "high" ]]; then
+  echo "ERROR: --risk-level must be one of low, medium, high"
+  exit 1
+fi
+
+if [[ "$METADATA_VERSION" != "2" && (-n "$CAPABILITIES" || -n "$ACTIVATION_INTENTS" || -n "$ACTIVATION_EVENTS" || -n "$ACTIVATION_ARTIFACTS" || -n "$RISK_LEVEL") ]]; then
+  echo "ERROR: activation metadata requires --metadata-version 2"
+  exit 1
+fi
+
 SKILL_DIR="$ROOT_PATH/$NAME"
 SKILL_FILE="$SKILL_DIR/SKILL.md"
 
@@ -133,6 +179,21 @@ mkdir -p "$SKILL_DIR"
   fi
   if [[ -n "$ARGUMENT_HINT" ]]; then
     echo "argument-hint: \"$ARGUMENT_HINT\""
+  fi
+  if [[ -n "$CAPABILITIES" ]]; then
+    echo "capabilities: \"$CAPABILITIES\""
+  fi
+  if [[ -n "$ACTIVATION_INTENTS" ]]; then
+    echo "activation-intents: \"$ACTIVATION_INTENTS\""
+  fi
+  if [[ -n "$ACTIVATION_EVENTS" ]]; then
+    echo "activation-events: \"$ACTIVATION_EVENTS\""
+  fi
+  if [[ -n "$ACTIVATION_ARTIFACTS" ]]; then
+    echo "activation-artifacts: \"$ACTIVATION_ARTIFACTS\""
+  fi
+  if [[ -n "$RISK_LEVEL" ]]; then
+    echo "risk-level: $RISK_LEVEL"
   fi
   echo "---"
   echo
