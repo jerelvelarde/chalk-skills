@@ -1,0 +1,95 @@
+{
+  "name": "chalk-skills",
+  "displayName": "Chalk Skills",
+  "description": "Gamified skill tree and inventory for Chalk development skills",
+  "version": "0.1.0",
+  "publisher": "chalk",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/skills/*/SKILL.md",
+    "workspaceContains:.chalk/skills/*/SKILL.md"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "chalk-skills",
+          "title": "Chalk Skills",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "chalk-skills": [
+        {
+          "id": "chalkSkillTree",
+          "name": "Skill Tree",
+          "type": "tree"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "chalkSkills.openDashboard",
+        "title": "Chalk Skills: Open Dashboard"
+      },
+      {
+        "command": "chalkSkills.openInventory",
+        "title": "Chalk Skills: Open Inventory"
+      },
+      {
+        "command": "chalkSkills.openSkillTree",
+        "title": "Chalk Skills: Open Skill Tree"
+      },
+      {
+        "command": "chalkSkills.viewSkill",
+        "title": "Chalk Skills: View Skill Card"
+      },
+      {
+        "command": "chalkSkills.refreshSkills",
+        "title": "Chalk Skills: Refresh Skills"
+      },
+      {
+        "command": "chalkSkills.recordUsage",
+        "title": "Chalk Skills: Record Skill Usage"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src --ext ts,tsx",
+    "package": "vsce package",
+    "dev": "webpack --mode development"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/vscode": "^1.85.0",
+    "autoprefixer": "^10.4.17",
+    "css-loader": "^6.9.1",
+    "mini-css-extract-plugin": "^2.7.7",
+    "postcss": "^8.4.33",
+    "postcss-loader": "^8.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "style-loader": "^3.3.4",
+    "tailwindcss": "^3.4.1",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
