@@ -14,15 +14,40 @@ export type RiskLevel = 'low' | 'medium' | 'high' | 'unknown';
 
 export type Rarity = 'common' | 'rare' | 'epic';
 
+// JSON Schema subset for skill input parameters
+export interface InputSchemaProperty {
+  type: string;
+  description?: string;
+}
+
+export interface InputSchema {
+  type: 'object';
+  properties?: Record<string, InputSchemaProperty>;
+  required?: string[];
+}
+
+// MCP-aligned behavioral annotations
+export interface SkillAnnotations {
+  readOnly: boolean;       // Does not modify environment
+  destructive: boolean;    // Can cause irreversible changes
+  idempotent: boolean;     // Safe to run repeatedly
+  openWorld: boolean;      // Reaches external systems (APIs, network)
+}
+
 export interface ChalkSkill {
   id: string;
   name: string;
   description: string;
-  owner: 'chalk' | 'project';
+  author: string;                     // renamed from owner — who made it
   version: string;
-  metadataVersion: 1 | 2;
+  metadataVersion: 1 | 2 | 3;
   allowedTools: string[];
   argumentHint?: string;
+  inputSchema?: InputSchema;          // v3: structured parameters
+  annotations: SkillAnnotations;      // v3: behavioral hints (MCP-aligned)
+  userInvocable: boolean;             // v3: can user trigger directly?
+  tags: string[];                     // v3: freeform tags for filtering
+  license?: string;                   // v3: for sharing/publishing
   capabilities: string[];
   activationIntents: string[];
   activationEvents: string[];
@@ -45,14 +70,14 @@ export interface PhaseInfo {
 }
 
 export const PHASES: PhaseInfo[] = [
-  { id: 'foundation', label: 'Foundation', color: '#64748b', icon: '\u{1F6E1}', order: 0 },
-  { id: 'design', label: 'Design', color: '#8b5cf6', icon: '\u{1F3A8}', order: 1 },
-  { id: 'architecture', label: 'Architecture', color: '#06b6d4', icon: '\u{1F3D7}', order: 2 },
-  { id: 'engineering', label: 'Engineering', color: '#f59e0b', icon: '\u{1F527}', order: 3 },
-  { id: 'development', label: 'Development', color: '#22c55e', icon: '\u{1F4BB}', order: 4 },
-  { id: 'launch', label: 'Launch', color: '#f97316', icon: '\u{1F680}', order: 5 },
-  { id: 'reference', label: 'Reference', color: '#6366f1', icon: '\u{1F4DA}', order: 6 },
-  { id: 'uncategorized', label: 'Uncategorized', color: '#6b7280', icon: '\u{1F4C1}', order: 7 },
+  { id: 'foundation', label: 'Foundation', color: '#94a3b8', icon: '\u{1F6E1}', order: 0 },
+  { id: 'design', label: 'Design', color: '#a78bfa', icon: '\u{1F3A8}', order: 1 },
+  { id: 'architecture', label: 'Architecture', color: '#38bdf8', icon: '\u{1F3D7}', order: 2 },
+  { id: 'engineering', label: 'Engineering', color: '#fbbf24', icon: '\u{1F527}', order: 3 },
+  { id: 'development', label: 'Development', color: '#4ade80', icon: '\u{1F4BB}', order: 4 },
+  { id: 'launch', label: 'Launch', color: '#fb923c', icon: '\u{1F680}', order: 5 },
+  { id: 'reference', label: 'Reference', color: '#a1a1aa', icon: '\u{1F4DA}', order: 6 },
+  { id: 'uncategorized', label: 'Uncategorized', color: '#94a3b8', icon: '\u{1F4C1}', order: 7 },
 ];
 
 export function getPhaseInfo(phase: Phase): PhaseInfo {
@@ -147,11 +172,17 @@ export type ExtensionMessage =
   | { type: 'skills:loaded'; payload: ChalkSkill[] }
   | { type: 'progression:loaded'; payload: ProgressionState }
   | { type: 'skill:updated'; payload: ChalkSkill }
-  | { type: 'achievement:unlocked'; payload: { id: string; name: string; icon: string; xpReward: number } };
+  | { type: 'achievement:unlocked'; payload: { id: string; name: string; icon: string; xpReward: number } }
+  | { type: 'level:up'; payload: { oldLevel: number; newLevel: number; title: string } }
+  | { type: 'autorecord:triggered'; payload: { skillId: string; trigger: 'file-read' | 'artifact-change' } }
+  | { type: 'navigate:tab'; payload: { tab: string; skillId?: string } };
 
 export type WebviewMessage =
   | { type: 'request:skills' }
   | { type: 'request:progression' }
   | { type: 'record:usage'; payload: { skillId: string } }
   | { type: 'navigate:skill'; payload: { skillId: string } }
-  | { type: 'open:skillFile'; payload: { filePath: string } };
+  | { type: 'open:skillFile'; payload: { filePath: string } }
+  | { type: 'override:phase'; payload: { skillId: string; phase: Phase } }
+  | { type: 'theme:changed'; payload: { theme: 'dark' | 'light' } }
+  | { type: 'create:skill' };

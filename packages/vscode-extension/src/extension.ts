@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
 import { loadAllSkills } from './skill-loader';
 import { SkillTreeProvider } from './tree/skill-tree-provider';
 import { loadProgressionState, saveProgressionState } from './persistence';
 import { recordSkillUsage } from './progression';
-import { ChalkSkill, ExtensionMessage, ProgressionState, WebviewMessage } from './types';
+import { ChalkSkill, ExtensionMessage, PLAYER_LEVELS, ProgressionState, WebviewMessage } from './types';
+import { AutoRecorder } from './auto-recorder';
+import { autoClassifySkills, loadPhaseOverrides, savePhaseOverride } from './auto-indexer';
+import { getTfidfClassifier } from './tfidf-classifier';
+import { initScaffold, createSkill } from './init-scaffold';
 
 let skills: ChalkSkill[] = [];
 let progressionState: ProgressionState;
 let treeProvider: SkillTreeProvider;
 let currentPanel: vscode.WebviewPanel | undefined;
+let autoRecorder: AutoRecorder;
 
 export function activate(context: vscode.ExtensionContext) {
   progressionState = loadProgressionState(context);
@@ -19,8 +22,21 @@ export function activate(context: vscode.ExtensionContext) {
   // Register tree view
   vscode.window.registerTreeDataProvider('chalkSkillTree', treeProvider);
 
+  // Initialize auto-recorder
+  autoRecorder = new AutoRecorder({
+    onSkillUsed: (skillId, trigger) => {
+      handleRecordUsage(context, skillId, true).then(() => {
+        if (currentPanel) {
+          postToWebview({ type: 'autorecord:triggered', payload: { skillId, trigger } });
+        }
+      });
+    },
+  });
+  autoRecorder.startWatching();
+  context.subscriptions.push(autoRecorder);
+
   // Load skills
-  refreshSkills();
+  refreshSkills(context);
 
   // Register commands
   context.subscriptions.push(
@@ -28,15 +44,28 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('chalkSkills.openInventory', () => openWebview(context, 'inventory')),
     vscode.commands.registerCommand('chalkSkills.openSkillTree', () => openWebview(context, 'skilltree')),
     vscode.commands.registerCommand('chalkSkills.viewSkill', (skillId: string) => openWebview(context, 'inventory', skillId)),
-    vscode.commands.registerCommand('chalkSkills.refreshSkills', () => refreshSkills()),
+    vscode.commands.registerCommand('chalkSkills.refreshSkills', () => refreshSkills(context)),
     vscode.commands.registerCommand('chalkSkills.recordUsage', () => pickAndRecordUsage(context)),
+    vscode.commands.registerCommand('chalkSkills.init', async () => {
+      await initScaffold();
+      refreshSkills(context);
+    }),
+    vscode.commands.registerCommand('chalkSkills.createSkill', async () => {
+      const created = await createSkill();
+      if (created) refreshSkills(context);
+    }),
+    vscode.commands.registerCommand('chalkSkills.autoIndex', () => {
+      vscode.window.showInformationMessage(
+        `Auto-indexed ${skills.filter(s => s.phase !== 'uncategorized').length} / ${skills.length} skills`,
+      );
+    }),
   );
 
   // File watcher for SKILL.md changes
   const watcher = vscode.workspace.createFileSystemWatcher('**/SKILL.md');
-  watcher.onDidChange(() => refreshSkills());
-  watcher.onDidCreate(() => refreshSkills());
-  watcher.onDidDelete(() => refreshSkills());
+  watcher.onDidChange(() => refreshSkills(context));
+  watcher.onDidCreate(() => refreshSkills(context));
+  watcher.onDidDelete(() => refreshSkills(context));
   context.subscriptions.push(watcher);
 }
 
@@ -49,13 +78,25 @@ function getWorkspaceRoot(): string | undefined {
   return folders?.[0]?.uri.fsPath;
 }
 
-function refreshSkills() {
+function refreshSkills(context: vscode.ExtensionContext) {
   const root = getWorkspaceRoot();
   if (!root) return;
 
-  skills = loadAllSkills(root);
+  const rawSkills = loadAllSkills(root);
+
+  // Train TF-IDF classifier with already-classified skills
+  const classifiedSkills = rawSkills.filter(s => s.phase !== 'uncategorized');
+  getTfidfClassifier().train(classifiedSkills);
+
+  // Apply auto-classification and user overrides
+  const overrides = loadPhaseOverrides(context);
+  skills = autoClassifySkills(rawSkills, overrides);
+
   treeProvider.setSkills(skills);
   treeProvider.setProgression(progressionState);
+
+  // Update auto-recorder with new skills
+  autoRecorder.setSkills(skills);
 
   if (currentPanel) {
     postToWebview({ type: 'skills:loaded', payload: skills });
@@ -80,9 +121,11 @@ async function pickAndRecordUsage(context: vscode.ExtensionContext) {
   }
 }
 
-async function handleRecordUsage(context: vscode.ExtensionContext, skillId: string) {
+async function handleRecordUsage(context: vscode.ExtensionContext, skillId: string, silent = false) {
   const skill = skills.find(s => s.id === skillId);
   if (!skill) return;
+
+  const oldLevel = progressionState.playerLevel;
 
   const result = recordSkillUsage(progressionState, skillId, skill.riskLevel, skills);
   progressionState = result.state;
@@ -92,13 +135,28 @@ async function handleRecordUsage(context: vscode.ExtensionContext, skillId: stri
 
   if (currentPanel) {
     postToWebview({ type: 'progression:loaded', payload: progressionState });
+
+    // Detect level-up
+    if (progressionState.playerLevel > oldLevel) {
+      const levelInfo = PLAYER_LEVELS.find(l => l.level === progressionState.playerLevel);
+      postToWebview({
+        type: 'level:up',
+        payload: {
+          oldLevel,
+          newLevel: progressionState.playerLevel,
+          title: levelInfo?.title ?? 'Unknown',
+        },
+      });
+    }
   }
 
   // Show achievement notifications
   for (const achievement of result.newAchievements) {
-    vscode.window.showInformationMessage(
-      `${achievement.icon} Achievement Unlocked: ${achievement.name}! +${achievement.xpReward} XP`,
-    );
+    if (!silent) {
+      vscode.window.showInformationMessage(
+        `${achievement.icon} Achievement Unlocked: ${achievement.name}! +${achievement.xpReward} XP`,
+      );
+    }
     if (currentPanel) {
       postToWebview({
         type: 'achievement:unlocked',
@@ -112,10 +170,12 @@ async function handleRecordUsage(context: vscode.ExtensionContext, skillId: stri
     }
   }
 
-  const levelInfo = result.wasDiscovery ? ' (New Discovery!)' : '';
-  vscode.window.showInformationMessage(
-    `+${result.xpEarned} XP for ${skill.name}${levelInfo}`,
-  );
+  if (!silent) {
+    const levelInfo = result.wasDiscovery ? ' (New Discovery!)' : '';
+    vscode.window.showInformationMessage(
+      `+${result.xpEarned} XP for ${skill.name}${levelInfo}`,
+    );
+  }
 }
 
 function postToWebview(message: ExtensionMessage) {
@@ -127,6 +187,7 @@ function openWebview(context: vscode.ExtensionContext, tab: string, skillId?: st
     currentPanel.reveal(vscode.ViewColumn.One);
     postToWebview({ type: 'skills:loaded', payload: skills });
     postToWebview({ type: 'progression:loaded', payload: progressionState });
+    postToWebview({ type: 'navigate:tab', payload: { tab, skillId } });
     return;
   }
 
@@ -141,7 +202,7 @@ function openWebview(context: vscode.ExtensionContext, tab: string, skillId?: st
     },
   );
 
-  currentPanel.webview.html = getWebviewContent(currentPanel.webview, context.extensionUri, tab, skillId);
+  currentPanel.webview.html = getWebviewContent(currentPanel.webview, context.extensionUri, context, tab, skillId);
 
   currentPanel.webview.onDidReceiveMessage(
     async (message: WebviewMessage) => {
@@ -160,6 +221,16 @@ function openWebview(context: vscode.ExtensionContext, tab: string, skillId?: st
           vscode.window.showTextDocument(uri);
           break;
         }
+        case 'override:phase':
+          await savePhaseOverride(context, message.payload.skillId, message.payload.phase);
+          refreshSkills(context);
+          break;
+        case 'theme:changed':
+          context.globalState.update('chalk.theme', message.payload.theme);
+          break;
+        case 'create:skill':
+          vscode.commands.executeCommand('chalkSkills.createSkill');
+          break;
       }
     },
     undefined,
@@ -174,15 +245,17 @@ function openWebview(context: vscode.ExtensionContext, tab: string, skillId?: st
 function getWebviewContent(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
+  context: vscode.ExtensionContext,
   initialTab: string,
   initialSkillId?: string,
 ): string {
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.js'));
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.css'));
   const nonce = getNonce();
+  const theme = context.globalState.get<string>('chalk.theme', 'dark');
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${theme}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -190,8 +263,8 @@ function getWebviewContent(
   <link href="${styleUri}" rel="stylesheet">
   <title>Chalk Skills</title>
 </head>
-<body class="bg-surface text-white">
-  <div id="root" data-initial-tab="${initialTab}" data-initial-skill="${initialSkillId ?? ''}"></div>
+<body data-theme="${theme}">
+  <div id="root" data-initial-tab="${initialTab}" data-initial-skill="${initialSkillId ?? ''}" data-theme="${theme}"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

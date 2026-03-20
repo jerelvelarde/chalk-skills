@@ -68,11 +68,16 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<TreeElement> {
 
   private createPhaseItem(node: PhaseNode): vscode.TreeItem {
     const info = getPhaseInfo(node.phase);
+    const discovered = node.skills.filter(s => this.progression?.skillUsage[s.id]).length;
     const item = new vscode.TreeItem(
-      `${info.icon} ${info.label} (${node.skills.length})`,
+      `${info.icon} ${info.label} (${discovered}/${node.skills.length})`,
       vscode.TreeItemCollapsibleState.Collapsed,
     );
-    item.tooltip = `${info.label} — ${node.skills.length} skills`;
+    item.tooltip = `${info.label} — ${discovered} discovered / ${node.skills.length} total`;
+    item.command = {
+      command: 'chalkSkills.openSkillTree',
+      title: 'Open Skill Tree',
+    };
     return item;
   }
 
