@@ -54,6 +54,7 @@ jobs:
         run: npx @vscode/vsce publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        continue-on-error: true
 
       - name: Publish to Open VSX
         run: npx ovsx publish --pat ${{ secrets.OVSX_PAT }}

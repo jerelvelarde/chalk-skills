@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.8] - 2026-03-20
+
+### Added
+- Open VSX Registry publishing (available in Cursor, Antigravity, and other VS Code forks)
+
+### Fixed
+- CI publish steps now independent — marketplace failure won't block Open VSX
+
 ## [0.8.7] - 2026-03-20
 
 ### Fixed
