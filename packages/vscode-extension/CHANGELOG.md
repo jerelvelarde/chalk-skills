@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.6] - 2026-03-20
+
+### Fixed
+- GIF demo preview now renders on VS Code Marketplace (switched from relative path to absolute GitHub raw URL)
+- Publisher ID corrected from `chalk` to `chalk-agents`
+- CI pipeline creates build directory before packaging (fixes ENOTDIR error)
+- Demo GIF compressed from 4.1MB to 2.5MB
+
 ## [0.8.5] - 2026-03-20
 
 ### Fixed
