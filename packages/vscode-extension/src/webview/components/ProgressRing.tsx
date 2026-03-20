@@ -21,15 +21,16 @@ export function ProgressRing({ progress, size = 64, strokeWidth = 4, color = '#f
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1e1b2e"
+          stroke="var(--radar-grid)"
           strokeWidth={strokeWidth}
+          strokeDasharray="3 5"
         />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={color}
+          stroke="var(--radar-stroke)"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -38,7 +39,10 @@ export function ProgressRing({ progress, size = 64, strokeWidth = 4, color = '#f
         />
       </svg>
       {label && (
-        <span className="absolute text-xs font-bold" style={{ color }}>
+        <span
+          className="absolute text-xs font-bold font-chalk"
+          style={{ color }}
+        >
           {label}
         </span>
       )}

@@ -6,7 +6,7 @@ export interface Filters {
   search: string;
   phases: Phase[];
   rarities: Rarity[];
-  owner: 'all' | 'chalk' | 'project';
+  author: 'all' | 'chalk' | 'project';
   sort: 'name' | 'phase' | 'rarity' | 'level' | 'version';
 }
 
@@ -14,7 +14,7 @@ export const DEFAULT_FILTERS: Filters = {
   search: '',
   phases: [],
   rarities: [],
-  owner: 'all',
+  author: 'all',
   sort: 'phase',
 };
 
@@ -41,10 +41,10 @@ export function FilterBar({ filters, onChange, totalCount, discoveredCount }: Pr
   };
 
   return (
-    <div className="space-y-3 p-4 bg-surface-light rounded-xl mb-4">
+    <div className="space-y-3 p-4 bg-board-light rounded-xl mb-4">
       {/* Discovery Counter */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold text-xp-bar">
+        <span className="text-sm font-bold text-chalk">
           {discoveredCount} / {totalCount} Skills Discovered
         </span>
         <div className="xp-bar w-32">
@@ -61,31 +61,29 @@ export function FilterBar({ filters, onChange, totalCount, discoveredCount }: Pr
         placeholder="Search skills..."
         value={filters.search}
         onChange={e => onChange({ ...filters, search: e.target.value })}
-        className="w-full px-3 py-1.5 text-sm bg-black/30 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-xp-bar"
+        className="w-full px-3 py-1.5 text-sm bg-board chalk-border rounded-lg text-chalk placeholder-chalk-dim focus:outline-none focus:border-xp-bar"
       />
 
       {/* Phase Toggles */}
       <div className="flex flex-wrap gap-1">
-        {PHASES.map(p => (
-          <button
-            key={p.id}
-            onClick={() => togglePhase(p.id)}
-            className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
-              filters.phases.length === 0 || filters.phases.includes(p.id)
-                ? 'text-white'
-                : 'text-gray-600'
-            }`}
-            style={{
-              background:
-                filters.phases.length === 0 || filters.phases.includes(p.id)
-                  ? `${p.color}30`
-                  : 'transparent',
-              border: `1px solid ${p.color}40`,
-            }}
-          >
-            {p.icon} {p.label}
-          </button>
-        ))}
+        {PHASES.map(p => {
+          const isActive = filters.phases.length === 0 || filters.phases.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => togglePhase(p.id)}
+              className={`text-[11px] px-2 py-0.5 rounded-full transition-colors font-chalk ${
+                isActive ? 'text-chalk filter-active' : 'text-chalk-dim'
+              }`}
+              style={{
+                background: isActive ? `${p.color}30` : 'transparent',
+                border: `1px solid ${p.color}40`,
+              }}
+            >
+              {p.icon} {p.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Rarity + Owner + Sort */}
@@ -95,34 +93,32 @@ export function FilterBar({ filters, onChange, totalCount, discoveredCount }: Pr
             { id: 'common' as Rarity, label: 'Common', color: '#9ca3af' },
             { id: 'rare' as Rarity, label: 'Rare', color: '#3b82f6' },
             { id: 'epic' as Rarity, label: 'Epic', color: '#a855f7' },
-          ]).map(r => (
-            <button
-              key={r.id}
-              onClick={() => toggleRarity(r.id)}
-              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                filters.rarities.length === 0 || filters.rarities.includes(r.id)
-                  ? 'text-white'
-                  : 'text-gray-600'
-              }`}
-              style={{
-                borderColor: `${r.color}60`,
-                background:
-                  filters.rarities.length === 0 || filters.rarities.includes(r.id)
-                    ? `${r.color}20`
-                    : 'transparent',
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
+          ]).map(r => {
+            const isActive = filters.rarities.length === 0 || filters.rarities.includes(r.id);
+            return (
+              <button
+                key={r.id}
+                onClick={() => toggleRarity(r.id)}
+                className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors font-chalk ${
+                  isActive ? 'text-chalk filter-active' : 'text-chalk-dim'
+                }`}
+                style={{
+                  borderColor: `${r.color}60`,
+                  background: isActive ? `${r.color}20` : 'transparent',
+                }}
+              >
+                {r.label}
+              </button>
+            );
+          })}
         </div>
 
         <select
-          value={filters.owner}
-          onChange={e => onChange({ ...filters, owner: e.target.value as Filters['owner'] })}
-          className="text-[10px] px-2 py-0.5 rounded bg-black/30 border border-white/10 text-gray-300"
+          value={filters.author}
+          onChange={e => onChange({ ...filters, author: e.target.value as Filters['author'] })}
+          className="text-[11px] px-2 py-0.5 rounded bg-board text-chalk chalk-border"
         >
-          <option value="all">All Owners</option>
+          <option value="all">All Authors</option>
           <option value="chalk">Chalk</option>
           <option value="project">Project</option>
         </select>
@@ -130,7 +126,7 @@ export function FilterBar({ filters, onChange, totalCount, discoveredCount }: Pr
         <select
           value={filters.sort}
           onChange={e => onChange({ ...filters, sort: e.target.value as Filters['sort'] })}
-          className="text-[10px] px-2 py-0.5 rounded bg-black/30 border border-white/10 text-gray-300"
+          className="text-[11px] px-2 py-0.5 rounded bg-board text-chalk chalk-border"
         >
           <option value="phase">Sort by Phase</option>
           <option value="name">Sort by Name</option>

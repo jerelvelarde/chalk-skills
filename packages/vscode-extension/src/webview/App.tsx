@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useSkills } from './hooks/useSkills';
 import { Dashboard } from './components/Dashboard';
 import { SkillInventory } from './components/SkillInventory';
 import { SkillTree } from './components/SkillTree';
+import { LevelUpCinematic } from './components/animations/LevelUpCinematic';
+import { AchievementCeremony } from './components/animations/AchievementCeremony';
+import { postMessage } from './vscode-api';
 
 type Tab = 'dashboard' | 'inventory' | 'skilltree';
+type Theme = 'dark' | 'light';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '\u{1F3AE}' },
@@ -12,64 +17,161 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'skilltree', label: 'Skill Tree', icon: '\u{1F333}' },
 ];
 
+function applyTheme(theme: Theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.body.setAttribute('data-theme', theme);
+}
+
+function useTheme(): [Theme, () => void] {
+  const root = document.getElementById('root');
+  const initial = (root?.dataset.theme as Theme) ?? 'dark';
+  const [theme, setTheme] = useState<Theme>(initial);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const toggle = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      postMessage({ type: 'theme:changed', payload: { theme: next } });
+      return next;
+    });
+  }, []);
+
+  return [theme, toggle];
+}
+
 export function App() {
   const root = document.getElementById('root');
   const initialTab = (root?.dataset.initialTab as Tab) ?? 'dashboard';
   const initialSkill = root?.dataset.initialSkill ?? undefined;
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const { skills, progression, lastAchievement } = useSkills();
+  const [focusSkillId, setFocusSkillId] = useState<string | undefined>(initialSkill);
+  const [theme, toggleTheme] = useTheme();
+  const {
+    skills,
+    progression,
+    lastAchievement,
+    dismissAchievement,
+    levelUp,
+    dismissLevelUp,
+    lastAutoRecord,
+    navigateTo,
+    clearNavigate,
+  } = useSkills();
+
+  // Handle navigate messages from extension host
+  useEffect(() => {
+    if (navigateTo) {
+      const tab = navigateTo.tab as Tab;
+      if (TABS.some(t => t.id === tab)) {
+        setActiveTab(tab);
+      }
+      if (navigateTo.skillId) {
+        setFocusSkillId(navigateTo.skillId);
+      }
+      clearNavigate();
+    }
+  }, [navigateTo]);
 
   return (
-    <div className="min-h-screen bg-surface">
-      {/* Achievement Toast */}
-      {lastAchievement && (
-        <div className="achievement-toast">
-          <div className="bg-surface-light border border-xp-bar/40 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg">
-            <span className="text-2xl">{lastAchievement.icon}</span>
-            <div>
-              <div className="text-sm font-bold text-xp-bar">Achievement Unlocked!</div>
-              <div className="text-xs text-gray-300">{lastAchievement.name}</div>
-              <div className="text-[10px] text-xp-bar">+{lastAchievement.xpReward} XP</div>
+    <div className="min-h-screen bg-board">
+      {/* Level Up Cinematic */}
+      <LevelUpCinematic levelUp={levelUp} onDismiss={dismissLevelUp} />
+
+      {/* Achievement Ceremony — deferred if level-up is playing */}
+      <AchievementCeremony
+        achievement={lastAchievement}
+        onDismiss={dismissAchievement}
+        defer={!!levelUp}
+      />
+
+      {/* Auto-record indicator */}
+      <AnimatePresence>
+        {lastAutoRecord && (
+          <motion.div
+            className="fixed top-4 left-4 z-[80]"
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+          >
+            <div className="bg-board-light chalk-border rounded-lg px-3 py-2 text-xs text-chalk-green flex items-center gap-2">
+              <motion.div
+                className="w-2 h-2 rounded-full bg-chalk-green"
+                animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              />
+              Auto-recorded: {lastAutoRecord.skillId}
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tab Navigation */}
-      <nav className="flex border-b border-white/10 px-4 sticky top-0 bg-surface z-40">
+      <nav className="flex chalk-line px-4 sticky top-0 bg-board z-40">
         {TABS.map(tab => (
-          <button
+          <motion.button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id ? 'tab-active' : 'tab-inactive'
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            className={`px-4 py-3 text-sm font-chalk font-medium transition-colors relative ${
+              activeTab === tab.id ? 'tab-active chalk-text' : 'tab-inactive'
             }`}
           >
             {tab.icon} {tab.label}
-          </button>
+            {activeTab === tab.id && (
+              <motion.div
+                className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-chalk"
+                style={{ boxShadow: '0 0 6px var(--text-glow)' }}
+                layoutId="activeTab"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+          </motion.button>
         ))}
-        <div className="ml-auto flex items-center text-xs text-gray-500 px-3">
-          {skills.length} skills loaded
+
+        <div className="ml-auto flex items-center gap-2 px-3">
+          <span className="text-xs text-chalk-dim font-chalk">
+            {skills.length} skills
+          </span>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '\u2600\uFE0F' : '\u{1F319}'}
+          </button>
         </div>
       </nav>
 
       {/* Content */}
-      <main>
-        {activeTab === 'dashboard' && (
-          <Dashboard skills={skills} progression={progression} />
-        )}
-        {activeTab === 'inventory' && (
-          <SkillInventory
-            skills={skills}
-            progression={progression}
-            focusSkillId={initialSkill}
-          />
-        )}
-        {activeTab === 'skilltree' && (
-          <SkillTree skills={skills} progression={progression} />
-        )}
-      </main>
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === 'dashboard' && (
+            <Dashboard skills={skills} progression={progression} />
+          )}
+          {activeTab === 'inventory' && (
+            <SkillInventory
+              skills={skills}
+              progression={progression}
+              focusSkillId={focusSkillId}
+            />
+          )}
+          {activeTab === 'skilltree' && (
+            <SkillTree skills={skills} progression={progression} />
+          )}
+        </motion.main>
+      </AnimatePresence>
     </div>
   );
 }

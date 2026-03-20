@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import type { ChalkSkill, Phase, ProgressionState, Rarity } from '../../types';
 import { getPhaseInfo } from '../../types';
 import { SkillCard } from './SkillCard';
 import { DEFAULT_FILTERS, FilterBar, Filters } from './FilterBar';
 import { postMessage } from '../vscode-api';
+import { AnimatedCard } from './animations/AnimatedCard';
+import { ModalTransition } from './animations/ModalTransition';
+import { EmptyState } from './animations/EmptyState';
 
 interface Props {
   skills: ChalkSkill[];
@@ -34,8 +38,8 @@ export function SkillInventory({ skills, progression, focusSkillId }: Props) {
     if (filters.rarities.length > 0) {
       result = result.filter(s => filters.rarities.includes(s.rarity));
     }
-    if (filters.owner !== 'all') {
-      result = result.filter(s => s.owner === filters.owner);
+    if (filters.author !== 'all') {
+      result = result.filter(s => s.author === filters.author);
     }
 
     switch (filters.sort) {
@@ -69,6 +73,9 @@ export function SkillInventory({ skills, progression, focusSkillId }: Props) {
     postMessage({ type: 'open:skillFile', payload: { filePath } });
   };
 
+  const selectedSkillData = selectedSkill ? skills.find(s => s.id === selectedSkill) : null;
+  const selectedUsage = selectedSkillData ? progression?.skillUsage[selectedSkillData.id] : undefined;
+
   return (
     <div className="p-4">
       <FilterBar
@@ -79,108 +86,108 @@ export function SkillInventory({ skills, progression, focusSkillId }: Props) {
       />
 
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        {filtered.map(skill => (
-          <div key={skill.id} className="flex justify-center">
-            <SkillCard
-              skill={skill}
-              progression={progression}
-              discovered={discoveredIds.has(skill.id)}
-              onClick={() => setSelectedSkill(selectedSkill === skill.id ? null : skill.id)}
-              onRecordUsage={() => handleRecordUsage(skill.id)}
-            />
-          </div>
-        ))}
+        <AnimatePresence mode="popLayout">
+          {filtered.map((skill, index) => (
+            <AnimatedCard key={skill.id} index={index} className="flex justify-center">
+              <SkillCard
+                skill={skill}
+                progression={progression}
+                discovered={discoveredIds.has(skill.id)}
+                onClick={() => setSelectedSkill(selectedSkill === skill.id ? null : skill.id)}
+                onRecordUsage={() => handleRecordUsage(skill.id)}
+              />
+            </AnimatedCard>
+          ))}
+        </AnimatePresence>
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16 text-gray-500">
-          No skills match your filters
-        </div>
+        <EmptyState
+          message="No skills match your filters"
+          action={{ label: 'Clear filters', onClick: () => setFilters(DEFAULT_FILTERS) }}
+        />
       )}
 
       {/* Skill Detail Drawer */}
-      {selectedSkill && (() => {
-        const skill = skills.find(s => s.id === selectedSkill);
-        if (!skill) return null;
-        const usage = progression?.skillUsage[skill.id];
+      <ModalTransition
+        open={!!selectedSkillData}
+        onClose={() => setSelectedSkill(null)}
+      >
+        {selectedSkillData && (
+          <div
+            className="bg-board-light chalk-border rounded-2xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto chalk-dust"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold font-chalk chalk-text text-chalk">{selectedSkillData.name}</h2>
+              <button onClick={() => setSelectedSkill(null)} className="text-chalk-dim hover:text-chalk">
+                X
+              </button>
+            </div>
+            <p className="text-sm text-chalk-dim mb-4">{selectedSkillData.description}</p>
 
-        return (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setSelectedSkill(null)}>
-            <div
-              className="bg-surface-light rounded-2xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">{skill.name}</h2>
-                <button onClick={() => setSelectedSkill(null)} className="text-gray-400 hover:text-white">
-                  X
-                </button>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">{skill.description}</p>
-
-              <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
-                <div className="bg-black/20 p-2 rounded">
-                  <span className="text-gray-500">Phase</span>
-                  <div style={{ color: getPhaseInfo(skill.phase).color }}>
-                    {getPhaseInfo(skill.phase).icon} {getPhaseInfo(skill.phase).label}
-                  </div>
-                </div>
-                <div className="bg-black/20 p-2 rounded">
-                  <span className="text-gray-500">Rarity</span>
-                  <div className={skill.rarity === 'epic' ? 'text-purple-400' : skill.rarity === 'rare' ? 'text-blue-400' : 'text-gray-300'}>
-                    {skill.rarity.charAt(0).toUpperCase() + skill.rarity.slice(1)}
-                  </div>
-                </div>
-                <div className="bg-black/20 p-2 rounded">
-                  <span className="text-gray-500">Version</span>
-                  <div>v{skill.version}</div>
-                </div>
-                <div className="bg-black/20 p-2 rounded">
-                  <span className="text-gray-500">Uses</span>
-                  <div>{usage?.usageCount ?? 0}</div>
+            <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+              <div className="bg-board p-2 rounded chalk-border-light">
+                <span className="text-chalk-dim">Phase</span>
+                <div style={{ color: getPhaseInfo(selectedSkillData.phase).color }}>
+                  {getPhaseInfo(selectedSkillData.phase).icon} {getPhaseInfo(selectedSkillData.phase).label}
                 </div>
               </div>
-
-              {skill.capabilities.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-xs text-gray-500 mb-1">Capabilities</div>
-                  <div className="flex flex-wrap gap-1">
-                    {skill.capabilities.map(c => (
-                      <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-white/10">{c}</span>
-                    ))}
-                  </div>
+              <div className="bg-board p-2 rounded chalk-border-light">
+                <span className="text-chalk-dim">Rarity</span>
+                <div className={selectedSkillData.rarity === 'epic' ? 'text-chalk-pink' : selectedSkillData.rarity === 'rare' ? 'text-chalk-blue' : 'text-chalk-dim'}>
+                  {selectedSkillData.rarity.charAt(0).toUpperCase() + selectedSkillData.rarity.slice(1)}
                 </div>
-              )}
-
-              {skill.allowedTools.length > 0 && (
-                <div className="mb-4">
-                  <div className="text-xs text-gray-500 mb-1">Allowed Tools</div>
-                  <div className="flex flex-wrap gap-1">
-                    {skill.allowedTools.map(t => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400">{t}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button
-                  className="flex-1 py-2 text-sm rounded-lg bg-xp-bar/20 text-xp-bar hover:bg-xp-bar/30 transition-colors"
-                  onClick={() => handleRecordUsage(skill.id)}
-                >
-                  + Record Usage
-                </button>
-                <button
-                  className="flex-1 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                  onClick={() => handleOpenFile(skill.filePath)}
-                >
-                  Open SKILL.md
-                </button>
+              </div>
+              <div className="bg-board p-2 rounded chalk-border-light">
+                <span className="text-chalk-dim">Version</span>
+                <div className="text-chalk">v{selectedSkillData.version}</div>
+              </div>
+              <div className="bg-board p-2 rounded chalk-border-light">
+                <span className="text-chalk-dim">Uses</span>
+                <div className="text-chalk">{selectedUsage?.usageCount ?? 0}</div>
               </div>
             </div>
+
+            {selectedSkillData.capabilities.length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs text-chalk-dim mb-1 font-chalk">Capabilities</div>
+                <div className="flex flex-wrap gap-1">
+                  {selectedSkillData.capabilities.map(c => (
+                    <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-board text-chalk-dim chalk-border-light">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedSkillData.allowedTools.length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs text-chalk-dim mb-1 font-chalk">Allowed Tools</div>
+                <div className="flex flex-wrap gap-1">
+                  {selectedSkillData.allowedTools.map(t => (
+                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-board text-chalk-dim">{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                className="flex-1 py-2 text-sm rounded-lg bg-chalk/10 text-chalk hover:bg-chalk/20 transition-colors font-chalk chalk-border"
+                onClick={() => handleRecordUsage(selectedSkillData.id)}
+              >
+                + Record Usage
+              </button>
+              <button
+                className="flex-1 py-2 text-sm rounded-lg bg-board hover:bg-board-light transition-colors font-chalk chalk-border"
+                onClick={() => handleOpenFile(selectedSkillData.filePath)}
+              >
+                Open SKILL.md
+              </button>
+            </div>
           </div>
-        );
-      })()}
+        )}
+      </ModalTransition>
     </div>
   );
 }

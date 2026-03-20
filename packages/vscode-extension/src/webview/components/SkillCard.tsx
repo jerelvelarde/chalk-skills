@@ -1,7 +1,9 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import type { ChalkSkill, ProgressionState } from '../../types';
 import { getPhaseInfo } from '../../types';
 import { getSkillLevelProgress, getSkillLevelTitle } from '../hooks/useProgression';
+import { ParticleField } from './animations/ParticleField';
 
 interface Props {
   skill: ChalkSkill;
@@ -21,7 +23,6 @@ function hashCode(str: string): number {
 }
 
 function GeometricArt({ skillId, color }: { skillId: string; color: string }) {
-  const h = hashCode(skillId);
   const shapes: React.ReactNode[] = [];
 
   for (let i = 0; i < 5; i++) {
@@ -73,100 +74,112 @@ export function SkillCard({ skill, progression, discovered, onClick, onRecordUsa
   const levelProgress = level > 0 ? getSkillLevelProgress(usageCount, level) : 0;
 
   const rarityClass =
-    skill.rarity === 'epic' ? 'card-epic holographic' :
-    skill.rarity === 'rare' ? 'card-rare' :
+    skill.rarity === 'epic' ? 'card-epic chalk-dust holographic' :
+    skill.rarity === 'rare' ? 'card-rare chalk-dust' :
     'card-common';
 
   if (!discovered) {
     return (
       <div
-        className="w-[280px] h-[380px] rounded-xl bg-card-bg border-2 border-gray-800 flex flex-col items-center justify-center gap-3 cursor-pointer opacity-50 card-tilt"
+        className="w-[280px] h-[380px] rounded-xl bg-card-bg chalk-border-light flex flex-col items-center justify-center gap-3 cursor-pointer opacity-50"
         onClick={onClick}
       >
-        <div className="text-5xl opacity-30">?</div>
-        <div className="text-sm text-gray-600">{skill.name}</div>
-        <div className="text-xs text-gray-700">Undiscovered</div>
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-card-border bg-board-dark flex items-center justify-center text-chalk-dim text-xl">
+          ?
+        </div>
+        <div className="text-sm text-chalk-dim">{skill.name}</div>
+        <div className="text-xs text-chalk-dim">Undiscovered</div>
       </div>
     );
   }
 
   return (
     <div
-      className={`w-[280px] h-[380px] rounded-xl bg-card-bg flex flex-col overflow-hidden cursor-pointer card-tilt ${rarityClass}`}
+      className={`w-[280px] h-[380px] rounded-xl bg-card-bg chalk-dust flex flex-col overflow-hidden cursor-pointer relative ${rarityClass}`}
       onClick={onClick}
     >
+      {/* Particles for rare/epic */}
+      {skill.rarity !== 'common' && (
+        <ParticleField rarity={skill.rarity} count={skill.rarity === 'epic' ? 10 : 6} />
+      )}
+
       {/* Phase Header */}
       <div
-        className="px-4 py-2 flex items-center justify-between"
-        style={{ background: `${phaseInfo.color}30` }}
+        className="px-4 py-2 flex items-center justify-between relative z-10"
+        style={{ background: `${phaseInfo.color}15` }}
       >
-        <span className="text-lg font-bold truncate">{skill.name}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-black/30">
+        <span className="text-lg font-chalk chalk-text line-clamp-2">{skill.name}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-black/30 text-chalk">
           v{skill.version}
         </span>
       </div>
 
       {/* Geometric Art */}
-      <div className="card-art" style={{ background: `${phaseInfo.color}10` }}>
+      <div className="card-art relative z-10" style={{ background: `${phaseInfo.color}10` }}>
         <GeometricArt skillId={skill.id} color={phaseInfo.color} />
       </div>
 
       {/* Description */}
-      <div className="px-4 py-2 flex-1">
-        <p className="text-xs text-gray-400 line-clamp-3">{skill.description}</p>
+      <div className="px-4 py-2 flex-1 relative z-10">
+        <p className="text-[13px] leading-relaxed text-chalk-dim line-clamp-3">{skill.description}</p>
       </div>
 
       {/* Capability Tags */}
-      <div className="px-4 pb-2 flex flex-wrap gap-1">
+      <div className="px-4 pb-2 flex flex-wrap gap-1 relative z-10">
         {skill.capabilities.slice(0, 3).map(cap => (
           <span
             key={cap}
-            className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300"
+            className="text-[11px] px-1.5 py-0.5 rounded-full bg-board text-chalk-dim"
           >
             {cap}
           </span>
         ))}
         {skill.capabilities.length > 3 && (
-          <span className="text-[10px] text-gray-500">+{skill.capabilities.length - 3}</span>
+          <span className="text-[11px] text-chalk-dim">+{skill.capabilities.length - 3}</span>
         )}
       </div>
 
       {/* Stats Row */}
-      <div className="px-4 pb-2 flex items-center gap-2 text-[10px]">
+      <div className="px-4 pb-2 flex items-center gap-2 text-[11px] relative z-10">
         <span
           className="px-1.5 py-0.5 rounded"
-          style={{ background: `${phaseInfo.color}30`, color: phaseInfo.color }}
+          style={{ background: `${phaseInfo.color}15`, color: phaseInfo.color }}
         >
           {phaseInfo.icon} {phaseInfo.label}
         </span>
-        <span className="px-1.5 py-0.5 rounded bg-white/5 text-gray-400">
-          {skill.owner}
+        <span className="px-1.5 py-0.5 rounded bg-board text-chalk-dim">
+          {skill.author}
         </span>
         {skill.allowedTools.length > 0 && (
-          <span className="text-gray-500 ml-auto">
+          <span className="text-chalk-dim ml-auto">
             {skill.allowedTools.length} tools
           </span>
         )}
       </div>
 
       {/* XP Bar Footer */}
-      <div className="px-4 pb-3 pt-1 border-t border-white/5">
+      <div className="px-4 pb-3 pt-1 chalk-border-light relative z-10">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-semibold" style={{ color: phaseInfo.color }}>
+          <span className="text-[11px] font-semibold" style={{ color: phaseInfo.color }}>
             {levelTitle}
           </span>
           {usage && (
-            <span className="text-[10px] text-gray-500">
+            <span className="text-[11px] text-chalk-dim">
               {usageCount} uses
             </span>
           )}
         </div>
         <div className="xp-bar">
-          <div className="xp-bar-fill" style={{ width: `${levelProgress * 100}%` }} />
+          <motion.div
+            className="xp-bar-fill"
+            initial={{ width: 0 }}
+            animate={{ width: `${levelProgress * 100}%` }}
+            transition={{ duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }}
+          />
         </div>
         {onRecordUsage && (
           <button
-            className="mt-2 w-full text-[10px] py-1 rounded bg-white/10 hover:bg-white/20 transition-colors"
+            className="mt-2 w-full text-[11px] py-1 rounded bg-board hover:bg-board-light transition-colors text-chalk"
             onClick={(e) => { e.stopPropagation(); onRecordUsage(); }}
           >
             + Record Usage

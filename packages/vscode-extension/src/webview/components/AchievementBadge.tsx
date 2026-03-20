@@ -21,20 +21,24 @@ export function AchievementBadge({ name, description, icon, unlocked, category }
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 p-2 ${unlocked ? 'badge-unlocked' : 'badge-locked'}`}
+      className={`flex flex-col items-center gap-1 p-2 ${
+        unlocked
+          ? 'badge-unlocked hover:bg-board-light transition-colors rounded-lg'
+          : 'badge-locked'
+      }`}
       title={`${name}: ${description}`}
     >
       <div
         className="w-16 h-16 rounded-full flex items-center justify-center text-2xl relative"
         style={{
-          border: `3px solid ${unlocked ? ringColor : '#374151'}`,
-          background: unlocked ? `${ringColor}15` : '#1a1a2e',
-          boxShadow: unlocked ? `0 0 12px ${ringColor}40` : 'none',
+          border: `2px dashed ${unlocked ? ringColor : 'var(--achievement-locked-border)'}`,
+          background: unlocked ? `${ringColor}10` : 'var(--achievement-locked-bg)',
+          boxShadow: unlocked ? `0 0 10px ${ringColor}25` : 'none',
         }}
       >
         {unlocked ? icon : '\u{1F512}'}
       </div>
-      <span className="text-[10px] text-center max-w-[72px] truncate">
+      <span className="text-[10px] text-center max-w-[80px] line-clamp-2">
         {unlocked ? name : '???'}
       </span>
     </div>
