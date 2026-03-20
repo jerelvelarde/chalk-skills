@@ -4,8 +4,6 @@ on:
   push:
     branches: [main]
     paths: ['packages/vscode-extension/**']
-  pull_request:
-    paths: ['packages/vscode-extension/**']
   release:
     types: [published]
 
@@ -29,7 +27,7 @@ jobs:
       - run: npm run compile
 
       - name: Package .vsix
-        run: npx @vscode/vsce package --out build/
+        run: mkdir -p build && npx @vscode/vsce package --out build/
 
       - name: Upload .vsix artifact
         uses: actions/upload-artifact@v4
@@ -61,4 +59,4 @@ jobs:
         run: npx ovsx publish --pat ${{ secrets.OVSX_PAT }}
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        continue-on-error: true  # Optional — don't fail if Open VSX isn't set up yet
+        continue-on-error: true
