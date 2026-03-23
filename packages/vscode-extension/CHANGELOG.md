@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.9] - 2026-03-23
+
+### Fixed
+- Open VSX namespace created — extension now publishes to both VS Code Marketplace and Open VSX
+- Theme-aware CSS variables added for rarity glows and achievement locked states
+
 ## [0.8.8] - 2026-03-20
 
 ### Added
