@@ -4,6 +4,18 @@ All notable changes to `chalk-skills` will be documented in this file.
 
 The format is inspired by Keep a Changelog and uses SemVer semantics for skill versions.
 
+## [0.9.0] — 2026-03-26
+
+### Added
+
+- Auto-gitignore for `.chalk/skills/*.enabled` activation state files — the extension now ensures these are excluded from version control in any workspace
+
+### Changed
+
+- Generalized `ensureGitignore()` to manage multiple Chalk-specific entries (`.chalk/context/` and `.chalk/skills/*.enabled`) with incremental append logic for missing entries
+
+---
+
 ## [Unreleased]
 
 ### Added
