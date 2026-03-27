@@ -11,6 +11,7 @@ import { initScaffold, createSkill } from './init-scaffold';
 import { ContextManager } from './context/context-manager';
 import { SkillRegistry, findRegistryPath } from './catalog/skill-registry';
 import { SkillActivation } from './catalog/skill-activation';
+import { syncBundledSkillsToWorkspace, getBundledRegistryYaml } from './bundled-skills';
 
 let skills: ChalkSkill[] = [];
 let progressionState: ProgressionState;
@@ -35,13 +36,23 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(contextManager);
     contextManager.startBackgroundRefresh();
 
-    // Load skill registry (catalog)
+    // Load skill registry (catalog) — workspace file takes priority, fall back to bundled
     const registryPath = findRegistryPath(root);
     if (registryPath) {
       try {
         skillRegistry = SkillRegistry.fromFile(registryPath);
       } catch {
         // Registry load is best-effort
+      }
+    }
+    if (!skillRegistry) {
+      const bundledYaml = getBundledRegistryYaml();
+      if (bundledYaml) {
+        try {
+          skillRegistry = SkillRegistry.fromYaml(bundledYaml);
+        } catch {
+          // Bundled registry parse is best-effort
+        }
       }
     }
 
@@ -110,6 +121,25 @@ export function activate(context: vscode.ExtensionContext) {
       );
     }),
     vscode.commands.registerCommand('chalkSkills.openCatalog', () => openWebview(context, 'catalog')),
+    vscode.commands.registerCommand('chalkSkills.syncBundledSkills', async () => {
+      const wsRoot = getWorkspaceRoot();
+      if (!wsRoot) {
+        vscode.window.showWarningMessage('Open a workspace first to sync bundled skills.');
+        return;
+      }
+      const confirm = await vscode.window.showInformationMessage(
+        'Sync all curated Chalk skills into .chalk/skills/ in your workspace?',
+        'Sync',
+        'Cancel',
+      );
+      if (confirm !== 'Sync') return;
+
+      const { written, skipped } = syncBundledSkillsToWorkspace(wsRoot);
+      vscode.window.showInformationMessage(
+        `Synced ${written} skills to workspace (${skipped} already existed).`,
+      );
+      refreshSkills(context);
+    }),
   );
 
   // File watcher for SKILL.md changes

@@ -33,7 +33,9 @@
     "workspaceContains:**/skills/*/SKILL.md",
     "workspaceContains:.chalk/skills/*/SKILL.md",
     "onCommand:chalkSkills.init",
-    "onCommand:chalkSkills.createSkill"
+    "onCommand:chalkSkills.createSkill",
+    "onCommand:chalkSkills.syncBundledSkills",
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -95,6 +97,10 @@
       {
         "command": "chalkSkills.createSkill",
         "title": "Chalk Skills: Create New Skill"
+      },
+      {
+        "command": "chalkSkills.syncBundledSkills",
+        "title": "Chalk Skills: Sync Curated Skills to Workspace"
       }
     ],
     "configuration": {
@@ -154,10 +160,11 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "compile": "webpack --mode production",
+    "bundle-skills": "node scripts/bundle-skills.js",
+    "compile": "npm run bundle-skills && webpack --mode production",
     "vscode:prepublish": "npm run clean && npm run compile",
     "watch": "webpack --mode development --watch",
-    "dev": "webpack --mode development",
+    "dev": "npm run bundle-skills && webpack --mode development",
     "lint": "eslint src --ext ts,tsx",
     "package": "npm run clean && npm run compile && vsce package --out build/",
     "publish": "npm run clean && npm run compile && vsce publish"
@@ -183,6 +190,7 @@
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.3",
     "webpack": "^5.90.0",
+    "copy-webpack-plugin": "^12.0.2",
     "webpack-cli": "^5.1.4"
   }
 }

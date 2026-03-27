@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 /** @param {Record<string,string>} env */
 module.exports = (env, argv) => {
@@ -40,6 +41,17 @@ module.exports = (env, argv) => {
           },
         ],
       },
+      plugins: [
+        new CopyPlugin({
+          patterns: [
+            {
+              from: path.resolve(__dirname, 'dist', 'bundled-skills.json'),
+              to: path.resolve(__dirname, 'dist', 'bundled-skills.json'),
+              noErrorOnMissing: true,
+            },
+          ],
+        }),
+      ],
       devtool: isProd ? false : 'nosources-source-map',
     },
 

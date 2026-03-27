@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import { ChalkSkill, InputSchema, RiskLevel, SkillAnnotations, riskToRarity } from './types';
 import { classifyPhase } from './phase-classifier';
 import { loadPhaseIndex } from './skill-indexer';
+import { loadBundledSkills } from './bundled-skills';
 
 function parseCommaSeparated(value: string | undefined): string[] {
   if (!value) return [];
@@ -166,6 +167,27 @@ export function loadAllSkills(rootPath: string): ChalkSkill[] {
     const skill = parseSkillFile(filePath, phaseIndex);
     if (skill) {
       skills.push(skill);
+    }
+  }
+
+  // If no workspace skills were found, fall back to the bundled catalog
+  // that ships inside the extension itself.
+  if (skills.length === 0) {
+    const bundled = loadBundledSkills();
+    if (bundled.length > 0) {
+      return bundled;
+    }
+  }
+
+  // Merge: for any bundled skill not already present on disk, include it
+  // so the user always sees the full curated catalog.
+  if (skills.length > 0) {
+    const existingIds = new Set(skills.map(s => s.id));
+    const bundled = loadBundledSkills();
+    for (const bs of bundled) {
+      if (!existingIds.has(bs.id)) {
+        skills.push(bs);
+      }
     }
   }
 
