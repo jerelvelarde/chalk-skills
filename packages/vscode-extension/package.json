@@ -2,7 +2,7 @@
   "name": "chalk-skills",
   "displayName": "Chalk Skills",
   "description": "Gamified skill manager for AI agents and development workflows. Discover, craft, and level up reusable skills.",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "publisher": "chalk-agents",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -33,7 +33,9 @@
     "workspaceContains:**/skills/*/SKILL.md",
     "workspaceContains:.chalk/skills/*/SKILL.md",
     "onCommand:chalkSkills.init",
-    "onCommand:chalkSkills.createSkill"
+    "onCommand:chalkSkills.createSkill",
+    "onCommand:chalkSkills.syncBundledSkills",
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -95,6 +97,10 @@
       {
         "command": "chalkSkills.createSkill",
         "title": "Chalk Skills: Create New Skill"
+      },
+      {
+        "command": "chalkSkills.syncBundledSkills",
+        "title": "Chalk Skills: Sync Curated Skills to Workspace"
       }
     ],
     "configuration": {
@@ -154,10 +160,11 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "compile": "webpack --mode production",
+    "bundle-skills": "ts-node --project scripts/tsconfig.json scripts/bundle-skills.ts",
+    "compile": "npm run bundle-skills && webpack --mode production",
     "vscode:prepublish": "npm run clean && npm run compile",
     "watch": "webpack --mode development --watch",
-    "dev": "webpack --mode development",
+    "dev": "npm run bundle-skills && webpack --mode development",
     "lint": "eslint src --ext ts,tsx",
     "package": "npm run clean && npm run compile && vsce package --out build/",
     "publish": "npm run clean && npm run compile && vsce publish"
@@ -181,8 +188,10 @@
     "style-loader": "^3.3.4",
     "tailwindcss": "^3.4.1",
     "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "webpack": "^5.90.0",
+    "copy-webpack-plugin": "^12.0.2",
     "webpack-cli": "^5.1.4"
   }
 }

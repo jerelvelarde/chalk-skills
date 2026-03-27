@@ -1,61 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
-import { ChalkSkill, InputSchema, RiskLevel, SkillAnnotations, riskToRarity } from './types';
+import { ChalkSkill, InputSchema, RiskLevel, riskToRarity } from './types';
 import { classifyPhase } from './phase-classifier';
 import { loadPhaseIndex } from './skill-indexer';
-
-function parseCommaSeparated(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
-/** Parse a frontmatter field that can be a YAML array or comma-separated string */
-function parseListField(value: unknown): string[] {
-  if (typeof value === 'string') return parseCommaSeparated(value);
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  return [];
-}
-
-function toDisplayName(kebab: string): string {
-  return kebab
-    .split('-')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
-
-/** Derive behavioral annotations from explicit fields or fall back to risk-level heuristics */
-function parseAnnotations(data: Record<string, unknown>, riskLevel: RiskLevel): SkillAnnotations {
-  // Explicit annotations take priority
-  if (
-    data['read-only'] !== undefined ||
-    data['destructive'] !== undefined ||
-    data['idempotent'] !== undefined ||
-    data['open-world'] !== undefined
-  ) {
-    return {
-      readOnly: data['read-only'] === true,
-      destructive: data['destructive'] === true,
-      idempotent: data['idempotent'] === true || data['idempotent'] === undefined, // default true
-      openWorld: data['open-world'] === true,
-    };
-  }
-
-  // Fall back: infer from risk-level for v1/v2 skills
-  switch (riskLevel) {
-    case 'high':
-      return { readOnly: false, destructive: true, idempotent: false, openWorld: true };
-    case 'medium':
-      return { readOnly: false, destructive: false, idempotent: false, openWorld: false };
-    case 'low':
-      return { readOnly: true, destructive: false, idempotent: true, openWorld: false };
-    default:
-      return { readOnly: false, destructive: false, idempotent: true, openWorld: false };
-  }
-}
+import { loadBundledSkills } from './bundled-skills';
+import { parseCommaSeparated, parseListField, toDisplayName, parseAnnotations } from './skill-parse-helpers';
 
 /** Parse optional input-schema from frontmatter */
 function parseInputSchema(data: Record<string, unknown>): InputSchema | undefined {
@@ -166,6 +116,27 @@ export function loadAllSkills(rootPath: string): ChalkSkill[] {
     const skill = parseSkillFile(filePath, phaseIndex);
     if (skill) {
       skills.push(skill);
+    }
+  }
+
+  // If no workspace skills were found, fall back to the bundled catalog
+  // that ships inside the extension itself.
+  if (skills.length === 0) {
+    const bundled = loadBundledSkills();
+    if (bundled.length > 0) {
+      return bundled;
+    }
+  }
+
+  // Merge: for any bundled skill not already present on disk, include it
+  // so the user always sees the full curated catalog.
+  if (skills.length > 0) {
+    const existingIds = new Set(skills.map(s => s.id));
+    const bundled = loadBundledSkills();
+    for (const bs of bundled) {
+      if (!existingIds.has(bs.id)) {
+        skills.push(bs);
+      }
     }
   }
 

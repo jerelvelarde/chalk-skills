@@ -4,11 +4,29 @@ All notable changes to `chalk-skills` will be documented in this file.
 
 The format is inspired by Keep a Changelog and uses SemVer semantics for skill versions.
 
+## [0.10.0] — 2026-03-27
+
+### Added
+
+- **Bundled skill catalog** — the VS Code extension now ships with all 78 curated skills pre-bundled as a JSON blob, giving users the full catalog out of the box
+- **"Sync Curated Skills to Workspace"** command to copy bundled skills into `.chalk/skills/` on demand
+- Bundled registry and skill-merge logic so workspace skills always take priority while bundled skills fill gaps
+- `AGENTS.md` repo overview for agent consumption
+
+### Changed
+
+- Build pipeline includes a TypeScript `bundle-skills` step that serializes all skill definitions at compile time
+- Shared skill-parsing helpers extracted into `skill-parse-helpers.ts` (single source of truth for runtime and build)
+- `buildFrontmatter()` uses `yaml.stringify()` for safe YAML serialization
+
 ## [0.9.0] — 2026-03-26
 
 ### Added
 
-- Auto-gitignore for `.chalk/skills/*.enabled` activation state files — the extension now ensures these are excluded from version control in any workspace
+- **Context injection engine** — skills can declare `context-needs` and `benefits-from` for automatic context gathering
+- **Skill catalog with registry** — `registry.yaml` format for curated skill collections
+- **Skill activation system** — per-workspace skill toggle with `.enabled` state files
+- Auto-gitignore for `.chalk/skills/*.enabled` activation state files
 
 ### Changed
 
