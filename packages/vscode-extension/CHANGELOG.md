@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.10.0] - 2026-03-27
+
+### Added
+- **Bundled skill catalog** — the extension now ships with all 78 curated Chalk skills pre-bundled, so users see the full catalog out of the box without needing a `skills/` directory in their workspace
+- New command **"Chalk Skills: Sync Curated Skills to Workspace"** — copies bundled skills into `.chalk/skills/` on demand, skipping any that already exist on disk
+- Bundled registry fallback — if no workspace `registry.yaml` is found, the extension uses the bundled one for the catalog UI
+- Skill merge logic — workspace skills take priority by ID, with bundled skills filling in any gaps so the catalog is always complete
+
+### Changed
+- Build pipeline now includes a `bundle-skills` step that serializes all `SKILL.md` files, `registry.yaml`, and `skills-index.yaml` into a single `dist/bundled-skills.json`
+- Shared skill-parsing helpers (`parseCommaSeparated`, `parseListField`, `toDisplayName`, `parseAnnotations`) extracted into `skill-parse-helpers.ts` — used by both the runtime loader and the build script
+- Build script rewritten from JavaScript to TypeScript (`scripts/bundle-skills.ts`), importing shared modules instead of duplicating logic
+- `buildFrontmatter()` now uses `yaml.stringify()` instead of manual string concatenation for safe serialization of special characters
+
+### Dependencies
+- Added `copy-webpack-plugin` (copies bundled JSON into dist)
+- Added `ts-node` (runs TypeScript build script)
+
+## [0.9.0] - 2026-03-26
+
+### Added
+- **Context injection engine** — skills can now declare `context-needs` and `benefits-from` in frontmatter, enabling the extension to automatically gather and inject relevant context (git diff, recent files, project structure, etc.) when a skill is activated
+- **Skill catalog with registry** — new `registry.yaml` format for curating skill collections with categories and featured skills
+- **Skill activation system** — toggle individual skills on/off per workspace with `.enabled` state files
+- Auto-gitignore for `.chalk/skills/*.enabled` activation state files
+
+### Changed
+- Generalized `ensureGitignore()` to manage multiple Chalk-specific entries (`.chalk/context/` and `.chalk/skills/*.enabled`)
+
 ## [0.8.9] - 2026-03-23
 
 ### Fixed
