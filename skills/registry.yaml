@@ -48,6 +48,7 @@ bundles:
       - flutter-widget-patterns
       - flutter-state-management
       - flutter-platform-patterns
+      - flutter-version-management
       - create-test-plan
       - review-code
       - debug-systematic
@@ -350,6 +351,10 @@ skills:
     description: "Flutter widget composition — Stateless, Stateful, keys, builders"
     phase: reference
     tags: [flutter, widgets, patterns]
+  flutter-version-management:
+    description: "Pins and manages Flutter SDK versions per project with FVM, IDEs, and CI"
+    phase: development
+    tags: [flutter, dart, tooling, sdk, fvm]
   manage-tech-debt:
     description: "Track, categorize, and prioritize technical debt"
     phase: engineering
